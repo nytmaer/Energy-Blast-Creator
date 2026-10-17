@@ -1,5 +1,7 @@
 # Energy Blast Creator
 
+[![Support on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/nytmaer)
+
 A lightweight **HTML5 Canvas energy beam generator** inspired by classic anime battle attacks.
 
 Design and preview cinematic energy blasts similar to **Kamehameha**, **Final Flash**, **Galick Gun**, and other beam-style techniques. The tool provides modular visual layers such as glow, beam core, particles, rings, and lightning so you can experiment with effects and build your own signature attacks.
@@ -185,3 +187,6 @@ Use it freely for experiments, games, or visual effects work.
 
 ---
 
+## Support
+
+If you find this project useful, you can support its development on Ko-fi: **[ko-fi.com/nytmaer](https://ko-fi.com/nytmaer)**
