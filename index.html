@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Energy Blast Creator</title>
+  <style>
+    :root {
+      --bg: #070b14;
+      --panel: rgba(10, 14, 26, 0.88);
+      --line: rgba(140, 180, 255, 0.18);
+      --text: #eaf2ff;
+      --muted: #9fb1d4;
+      --accent: #79a9ff;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at top, #15203b 0%, #090d17 40%, #04060c 100%);
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    #app {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      grid-template-columns: 340px 1fr;
+    }
+
+    #controls {
+      position: relative;
+      z-index: 2;
+      padding: 18px;
+      background: var(--panel);
+      border-right: 1px solid var(--line);
+      backdrop-filter: blur(8px);
+      overflow-y: auto;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 22px;
+      letter-spacing: 0.04em;
+    }
+
+    .sub {
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .group {
+      margin-bottom: 16px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(255,255,255,0.02);
+    }
+
+    .group h2 {
+      margin: 0 0 12px;
+      font-size: 14px;
+      color: #d9e6ff;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .row:last-child { margin-bottom: 0; }
+
+    label {
+      font-size: 13px;
+      color: #d8e3fa;
+    }
+
+    input[type="range"], select {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+
+    input[type="range"] {
+      grid-column: 1 / -1;
+    }
+
+    .value {
+      font-size: 12px;
+      color: var(--muted);
+      min-width: 40px;
+      text-align: right;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    button {
+      border: 1px solid rgba(144, 179, 255, 0.22);
+      background: linear-gradient(180deg, rgba(105, 146, 255, 0.22), rgba(77, 99, 170, 0.16));
+      color: white;
+      padding: 11px 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    button:hover {
+      filter: brightness(1.12);
+    }
+
+    button:active {
+      transform: translateY(1px);
+    }
+
+    #stageWrap {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .badge {
+      display: inline-block;
+      margin-top: 6px;
+      padding: 5px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .hint {
+      margin-top: 14px;
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--muted);
+    }
+
+    .footer {
+      margin-top: 18px;
+      padding-top: 12px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 960px) {
+      #app {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+      }
+
+      #controls {
+        max-height: 44vh;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <aside id="controls">
+      <h1>Energy Blast Creator</h1>
+      <p class="sub">
+        Single-file HTML canvas tool for building anime-style beam attacks. Swap presets,
+        tune the pieces, then animate charge and release however you want.
+      </p>
+
+      <div class="group">
+        <h2>Preset</h2>
+        <div class="row">
+          <label for="preset">Blast Style</label>
+          <span class="value" id="presetLabel">Kamehameha</span>
+          <select id="preset">
+            <option value="kamehameha">Kamehameha</option>
+            <option value="finalFlash">Final Flash</option>
+            <option value="galickGun">Galick Gun</option>
+            <option value="masenko">Masenko</option>
+            <option value="deathBeam">Death Beam</option>
+            <option value="custom">Custom</option>
+          </select>
+        </div>
+        <span class="badge">Build pieces first, animate later</span>
+      </div>
+
+      <div class="group">
+        <h2>Core Shape</h2>
+        <div class="row"><label>Hue</label><span class="value" id="hueVal"></span><input id="hue" type="range" min="0" max="360" value="205" /></div>
+        <div class="row"><label>Saturation</label><span class="value" id="satVal"></span><input id="sat" type="range" min="0" max="100" value="95" /></div>
+        <div class="row"><label>Lightness</label><span class="value" id="lightVal"></span><input id="light" type="range" min="10" max="90" value="65" /></div>
+        <div class="row"><label>Beam Width</label><span class="value" id="widthVal"></span><input id="beamWidth" type="range" min="8" max="140" value="48" /></div>
+        <div class="row"><label>Core Intensity</label><span class="value" id="coreVal"></span><input id="coreIntensity" type="range" min="0.2" max="2.2" step="0.01" value="1.1" /></div>
+        <div class="row"><label>Glow Spread</label><span class="value" id="glowVal"></span><input id="glowSpread" type="range" min="10" max="250" value="120" /></div>
+      </div>
+
+      <div class="group">
+        <h2>Energy Motion</h2>
+        <div class="row"><label>Charge</label><span class="value" id="chargeVal"></span><input id="charge" type="range" min="0" max="1" step="0.01" value="0.72" /></div>
+        <div class="row"><label>Beam Length</label><span class="value" id="lengthVal"></span><input id="length" type="range" min="0.05" max="1" step="0.01" value="0.64" /></div>
+        <div class="row"><label>Speed</label><span class="value" id="speedVal"></span><input id="speed" type="range" min="0.1" max="4" step="0.01" value="1.4" /></div>
+        <div class="row"><label>Wobble</label><span class="value" id="wobbleVal"></span><input id="wobble" type="range" min="0" max="40" value="10" /></div>
+        <div class="row"><label>Pulse</label><span class="value" id="pulseVal"></span><input id="pulse" type="range" min="0" max="1" step="0.01" value="0.5" /></div>
+      </div>
+
+      <div class="group">
+        <h2>FX Pieces</h2>
+        <div class="row"><label>Particles</label><span class="value" id="particlesVal"></span><input id="particles" type="range" min="0" max="220" value="70" /></div>
+        <div class="row"><label>Shock Rings</label><span class="value" id="ringsVal"></span><input id="rings" type="range" min="0" max="10" value="4" /></div>
+        <div class="row"><label>Lightning</label><span class="value" id="lightningVal"></span><input id="lightning" type="range" min="0" max="1" step="0.01" value="0.15" /></div>
+        <div class="row"><label>Noise Streaks</label><span class="value" id="noiseVal"></span><input id="noise" type="range" min="0" max="1" step="0.01" value="0.3" /></div>
+      </div>
+
+      <div class="group">
+        <h2>Sequence</h2>
+        <div class="actions">
+          <button id="playCharge">Play Charge</button>
+          <button id="playFire">Play Fire</button>
+          <button id="playFull">Play Full</button>
+          <button id="toggleLoop">Loop: Off</button>
+        </div>
+        <p class="hint">
+          The render is broken into reusable layers: source flare, aura shell, beam core,
+          beam glow, particles, rings, and lightning accents.
+        </p>
+      </div>
+
+      <div class="footer">
+        Tip: presets give you Dragon Ball-inspired shapes fast. Custom lets you dial in your
+        own signature attack and keep the pieces easy to reuse in a later animation system.
+      </div>
+    </aside>
+
+    <main id="stageWrap">
+      <canvas id="stage"></canvas>
+    </main>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('stage');
+    const ctx = canvas.getContext('2d');
+
+    const controls = {
+      preset: document.getElementById('preset'),
+      hue: document.getElementById('hue'),
+      sat: document.getElementById('sat'),
+      light: document.getElementById('light'),
+      beamWidth: document.getElementById('beamWidth'),
+      coreIntensity: document.getElementById('coreIntensity'),
+      glowSpread: document.getElementById('glowSpread'),
+      charge: document.getElementById('charge'),
+      length: document.getElementById('length'),
+      speed: document.getElementById('speed'),
+      wobble: document.getElementById('wobble'),
+      pulse: document.getElementById('pulse'),
+      particles: document.getElementById('particles'),
+      rings: document.getElementById('rings'),
+      lightning: document.getElementById('lightning'),
+      noise: document.getElementById('noise')
+    };
+
+    const labels = {
+      presetLabel: document.getElementById('presetLabel'),
+      hueVal: document.getElementById('hueVal'),
+      satVal: document.getElementById('satVal'),
+      lightVal: document.getElementById('lightVal'),
+      widthVal: document.getElementById('widthVal'),
+      coreVal: document.getElementById('coreVal'),
+      glowVal: document.getElementById('glowVal'),
+      chargeVal: document.getElementById('chargeVal'),
+      lengthVal: document.getElementById('lengthVal'),
+      speedVal: document.getElementById('speedVal'),
+      wobbleVal: document.getElementById('wobbleVal'),
+      pulseVal: document.getElementById('pulseVal'),
+      particlesVal: document.getElementById('particlesVal'),
+      ringsVal: document.getElementById('ringsVal'),
+      lightningVal: document.getElementById('lightningVal'),
+      noiseVal: document.getElementById('noiseVal')
+    };
+
+    const presets = {
+      kamehameha: {
+        hue: 205, sat: 95, light: 65, beamWidth: 48, coreIntensity: 1.15, glowSpread: 120,
+        charge: 0.72, length: 0.64, speed: 1.4, wobble: 10, pulse: 0.5,
+        particles: 70, rings: 4, lightning: 0.15, noise: 0.30
+      },
+      finalFlash: {
+        hue: 52, sat: 100, light: 67, beamWidth: 84, coreIntensity: 1.65, glowSpread: 180,
+        charge: 0.95, length: 0.78, speed: 1.9, wobble: 6, pulse: 0.72,
+        particles: 110, rings: 6, lightning: 0.22, noise: 0.48
+      },
+      galickGun: {
+        hue: 280, sat: 88, light: 60, beamWidth: 56, coreIntensity: 1.2, glowSpread: 135,
+        charge: 0.8, length: 0.7, speed: 1.55, wobble: 14, pulse: 0.56,
+        particles: 78, rings: 5, lightning: 0.18, noise: 0.34
+      },
+      masenko: {
+        hue: 48, sat: 98, light: 62, beamWidth: 52, coreIntensity: 1.35, glowSpread: 140,
+        charge: 0.86, length: 0.66, speed: 1.7, wobble: 8, pulse: 0.52,
+        particles: 74, rings: 4, lightning: 0.14, noise: 0.26
+      },
+      deathBeam: {
+        hue: 338, sat: 90, light: 70, beamWidth: 18, coreIntensity: 1.8, glowSpread: 64,
+        charge: 0.52, length: 0.84, speed: 2.5, wobble: 2, pulse: 0.25,
+        particles: 22, rings: 2, lightning: 0.04, noise: 0.12
+      }
+    };
+
+    let state = {
+      phase: 'idle',
+      phaseTime: 0,
+      loop: false,
+      started: performance.now(),
+      particles: []
+    };
+
+    function resize() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      canvas.width = Math.floor(w * dpr);
+      canvas.height = Math.floor(h * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function clamp(v, min, max) {
+      return Math.max(min, Math.min(max, v));
+    }
+
+    function lerp(a, b, t) {
+      return a + (b - a) * t;
+    }
+
+    function easeOutCubic(t) {
+      return 1 - Math.pow(1 - t, 3);
+    }
+
+    function easeInOutSine(t) {
+      return -(Math.cos(Math.PI * t) - 1) / 2;
+    }
+
+    function rand(min, max) {
+      return min + Math.random() * (max - min);
+    }
+
+    function hsl(h, s, l, a = 1) {
+      return `hsla(${h}, ${s}%, ${l}%, ${a})`;
+    }
+
+    function getConfig() {
+      return {
+        preset: controls.preset.value,
+        hue: +controls.hue.value,
+        sat: +controls.sat.value,
+        light: +controls.light.value,
+        beamWidth: +controls.beamWidth.value,
+        coreIntensity: +controls.coreIntensity.value,
+        glowSpread: +controls.glowSpread.value,
+        charge: +controls.charge.value,
+        length: +controls.length.value,
+        speed: +controls.speed.value,
+        wobble: +controls.wobble.value,
+        pulse: +controls.pulse.value,
+        particles: +controls.particles.value,
+        rings: +controls.rings.value,
+        lightning: +controls.lightning.value,
+        noise: +controls.noise.value,
+      };
+    }
+
+    function setControlValues(values) {
+      Object.entries(values).forEach(([key, value]) => {
+        if (controls[key]) controls[key].value = value;
+      });
+      updateLabels();
+    }
+
+    function updateLabels() {
+      const c = getConfig();
+      labels.presetLabel.textContent = controls.preset.options[controls.preset.selectedIndex].text;
+      labels.hueVal.textContent = c.hue;
+      labels.satVal.textContent = c.sat + '%';
+      labels.lightVal.textContent = c.light + '%';
+      labels.widthVal.textContent = c.beamWidth + 'px';
+      labels.coreVal.textContent = c.coreIntensity.toFixed(2);
+      labels.glowVal.textContent = c.glowSpread + 'px';
+      labels.chargeVal.textContent = c.charge.toFixed(2);
+      labels.lengthVal.textContent = c.length.toFixed(2);
+      labels.speedVal.textContent = c.speed.toFixed(2);
+      labels.wobbleVal.textContent = c.wobble;
+      labels.pulseVal.textContent = c.pulse.toFixed(2);
+      labels.particlesVal.textContent = c.particles;
+      labels.ringsVal.textContent = c.rings;
+      labels.lightningVal.textContent = c.lightning.toFixed(2);
+      labels.noiseVal.textContent = c.noise.toFixed(2);
+    }
+
+    function autoCustomPreset() {
+      if (controls.preset.value !== 'custom') {
+        controls.preset.value = 'custom';
+      }
+      updateLabels();
+    }
+
+    function applyPreset(name) {
+      if (presets[name]) setControlValues(presets[name]);
+      updateLabels();
+    }
+
+    function resetParticles() {
+      state.particles = [];
+    }
+
+    function spawnParticle(originX, originY, radius, cfg) {
+      const angle = rand(-Math.PI * 0.65, Math.PI * 0.65);
+      const speed = rand(0.6, 3.4) * cfg.speed;
+      state.particles.push({
+        x: originX + Math.cos(angle) * rand(0, radius * 0.25),
+        y: originY + Math.sin(angle) * rand(0, radius * 0.7),
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: rand(20, 60),
+        maxLife: rand(20, 60),
+        size: rand(1, 5),
+        orbit: rand(-0.08, 0.08),
+      });
+    }
+
+    function updateParticles(originX, originY, radius, cfg) {
+      const targetCount = cfg.particles;
+      if (state.particles.length < targetCount) {
+        for (let i = state.particles.length; i < targetCount; i++) {
+          spawnParticle(originX, originY, radius, cfg);
+        }
+      }
+
+      for (let i = state.particles.length - 1; i >= 0; i--) {
+        const p = state.particles[i];
+        p.life -= 1;
+        if (p.life <= 0) {
+          state.particles.splice(i, 1);
+          spawnParticle(originX, originY, radius, cfg);
+          continue;
+        }
+        const dx = p.x - originX;
+        const dy = p.y - originY;
+        const swirl = Math.atan2(dy, dx) + p.orbit;
+        p.vx += Math.cos(swirl) * 0.015;
+        p.vy += Math.sin(swirl) * 0.015;
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vx *= 0.985;
+        p.vy *= 0.985;
+      }
+    }
+
+    function drawBackground(time, cfg) {
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+
+      const bg = ctx.createLinearGradient(0, 0, 0, h);
+      bg.addColorStop(0, '#101a34');
+      bg.addColorStop(0.45, '#08101f');
+      bg.addColorStop(1, '#03050a');
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, w, h);
+
+      const floorGlow = ctx.createRadialGradient(w * 0.58, h * 0.82, 0, w * 0.58, h * 0.82, w * 0.5);
+      floorGlow.addColorStop(0, hsl(cfg.hue, cfg.sat, 50, 0.12));
+      floorGlow.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = floorGlow;
+      ctx.fillRect(0, 0, w, h);
+
+      for (let i = 0; i < 90; i++) {
+        const x = (i * 187.73 + time * 0.02 * (i % 3 + 1)) % w;
+        const y = (i * 91.17) % h;
+        const alpha = 0.04 + ((i % 5) * 0.01);
+        ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+        ctx.fillRect(x, y, 1.2, 1.2);
+      }
+    }
+
+    function drawSourceFlare(x, y, radius, cfg, energy) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+
+      const outer = ctx.createRadialGradient(x, y, 0, x, y, radius * 2.2);
+      outer.addColorStop(0, hsl(cfg.hue, cfg.sat, 92, 0.95 * energy));
+      outer.addColorStop(0.18, hsl(cfg.hue, cfg.sat, cfg.light + 10, 0.65 * energy));
+      outer.addColorStop(0.45, hsl(cfg.hue, cfg.sat, cfg.light, 0.32 * energy));
+      outer.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = outer;
+      ctx.beginPath();
+      ctx.arc(x, y, radius * 2.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      const inner = ctx.createRadialGradient(x, y, 0, x, y, radius);
+      inner.addColorStop(0, 'rgba(255,255,255,1)');
+      inner.addColorStop(0.4, hsl(cfg.hue, cfg.sat, 90, 0.95));
+      inner.addColorStop(1, hsl(cfg.hue, cfg.sat, 60, 0));
+      ctx.fillStyle = inner;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function drawAuraShell(x, y, radius, cfg, time, energy) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const lobes = 10;
+
+      for (let i = 0; i < lobes; i++) {
+        const angle = (Math.PI * 2 * i) / lobes + time * 0.002 * cfg.speed;
+        const stretch = 1 + Math.sin(time * 0.01 + i) * 0.15 * cfg.pulse;
+        const rx = radius * rand(0.95, 1.2) * stretch;
+        const ry = radius * rand(1.4, 1.9) * stretch;
+        const ox = Math.cos(angle) * radius * 0.35;
+        const oy = Math.sin(angle) * radius * 0.35;
+
+        const grd = ctx.createRadialGradient(x + ox, y + oy, 0, x + ox, y + oy, ry);
+        grd.addColorStop(0, hsl(cfg.hue, cfg.sat, 80, 0.18 * energy));
+        grd.addColorStop(0.5, hsl(cfg.hue, cfg.sat, 62, 0.1 * energy));
+        grd.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = grd;
+
+        ctx.save();
+        ctx.translate(x + ox, y + oy);
+        ctx.rotate(angle);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, rx * 0.45, ry, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      ctx.restore();
+    }
+
+    function beamPath(x1, y1, x2, y2, width, wobble, time, cfg) {
+      const segments = 26;
+      ctx.beginPath();
+      for (let i = 0; i <= segments; i++) {
+        const t = i / segments;
+        const x = lerp(x1, x2, t);
+        const wave = Math.sin(t * 16 - time * 0.02 * cfg.speed) * wobble * (1 - t * 0.25);
+        const y = lerp(y1, y2, t) + wave;
+        const localWidth = width * (1 - t * 0.18);
+        if (i === 0) ctx.moveTo(x, y - localWidth * 0.5);
+        else ctx.lineTo(x, y - localWidth * 0.5);
+      }
+      for (let i = segments; i >= 0; i--) {
+        const t = i / segments;
+        const x = lerp(x1, x2, t);
+        const wave = Math.sin(t * 16 - time * 0.02 * cfg.speed) * wobble * (1 - t * 0.25);
+        const y = lerp(y1, y2, t) + wave;
+        const localWidth = width * (1 - t * 0.18);
+        ctx.lineTo(x, y + localWidth * 0.5);
+      }
+      ctx.closePath();
+    }
+
+    function drawBeamCore(x1, y1, x2, y2, width, cfg, time, energy) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      beamPath(x1, y1, x2, y2, width, cfg.wobble, time, cfg);
+      const core = ctx.createLinearGradient(x1, y1, x2, y2);
+      core.addColorStop(0, hsl(cfg.hue, cfg.sat, 95, 0.95 * energy));
+      core.addColorStop(0.18, hsl(cfg.hue, cfg.sat, 88, 0.92 * energy));
+      core.addColorStop(0.48, hsl(cfg.hue, cfg.sat, cfg.light + 6, 0.86 * energy));
+      core.addColorStop(1, hsl(cfg.hue, cfg.sat, cfg.light + 12, 0));
+      ctx.fillStyle = core;
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawBeamGlow(x1, y1, x2, y2, width, cfg, time, energy) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      beamPath(x1, y1, x2, y2, width + cfg.glowSpread * 0.35, cfg.wobble * 1.5, time, cfg);
+      const glow = ctx.createLinearGradient(x1, y1, x2, y2);
+      glow.addColorStop(0, hsl(cfg.hue, cfg.sat, cfg.light + 10, 0.22 * energy));
+      glow.addColorStop(0.5, hsl(cfg.hue, cfg.sat, cfg.light, 0.14 * energy));
+      glow.addColorStop(1, hsl(cfg.hue, cfg.sat, cfg.light, 0));
+      ctx.fillStyle = glow;
+      ctx.filter = `blur(${Math.max(10, cfg.glowSpread * 0.25)}px)`;
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawNoiseStreaks(x1, y1, x2, y2, width, cfg, time, energy) {
+      if (cfg.noise <= 0.01) return;
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = hsl(cfg.hue, cfg.sat, 90, 0.12 * cfg.noise * energy);
+      ctx.lineWidth = 1.5;
+
+      for (let i = 0; i < 12; i++) {
+        const t1 = rand(0.05, 0.95);
+        const t2 = clamp(t1 + rand(0.03, 0.14), 0, 1);
+        const ox = Math.sin(time * 0.01 + i) * cfg.wobble;
+        const yOff = rand(-width * 1.1, width * 1.1);
+        ctx.beginPath();
+        ctx.moveTo(lerp(x1, x2, t1) + ox, lerp(y1, y2, t1) + yOff);
+        ctx.lineTo(lerp(x1, x2, t2) + ox * 0.7, lerp(y1, y2, t2) + yOff * 0.8);
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+    function drawRings(x, y, maxRadius, cfg, time, energy) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < cfg.rings; i++) {
+        const t = ((time * 0.0017 * cfg.speed) + i / Math.max(cfg.rings, 1)) % 1;
+        const r = lerp(maxRadius * 0.35, maxRadius, t);
+        ctx.strokeStyle = hsl(cfg.hue, cfg.sat, 80, (1 - t) * 0.18 * energy);
+        ctx.lineWidth = lerp(6, 0.4, t);
+        ctx.beginPath();
+        ctx.ellipse(x, y, r * 1.2, r * 0.42, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawParticles(originX, originY, cfg) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      for (const p of state.particles) {
+        const alpha = p.life / p.maxLife;
+        ctx.fillStyle = hsl(cfg.hue, cfg.sat, 85, alpha * 0.7);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function drawLightning(x1, y1, x2, y2, cfg, time, energy) {
+      if (cfg.lightning <= 0.01) return;
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = hsl(cfg.hue, cfg.sat, 95, 0.55 * cfg.lightning * energy);
+      ctx.lineWidth = 1.8;
+
+      for (let l = 0; l < Math.ceil(cfg.lightning * 10); l++) {
+        const steps = 8;
+        ctx.beginPath();
+        for (let i = 0; i <= steps; i++) {
+          const t = i / steps;
+          const x = lerp(x1, x2, t);
+          const y = lerp(y1, y2, t) + Math.sin((t * 22) + time * 0.03 + l) * cfg.wobble * 1.9 + rand(-7, 7);
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+    function drawImpactTip(x, y, width, cfg, energy) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const grad = ctx.createRadialGradient(x, y, 0, x, y, width * 2.6);
+      grad.addColorStop(0, 'rgba(255,255,255,0.95)');
+      grad.addColorStop(0.25, hsl(cfg.hue, cfg.sat, 82, 0.55 * energy));
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(x, y, width * 2.6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawGroundShadow(x, y, width, len, cfg) {
+      ctx.save();
+      const grad = ctx.createRadialGradient(x, y + 50, 0, x + len * 0.55, y + 50, len * 0.9);
+      grad.addColorStop(0, 'rgba(0,0,0,0.28)');
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.ellipse(x + len * 0.5, y + 50, len * 0.6, width * 1.45, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function getPhaseState(cfg) {
+      const chargeDuration = 1200 / cfg.speed;
+      const fireDuration = 1000 / cfg.speed;
+      const totalDuration = chargeDuration + fireDuration;
+      let chargeT = 0;
+      let fireT = 0;
+
+      if (state.phase === 'charge') {
+        chargeT = clamp(state.phaseTime / chargeDuration, 0, 1);
+      } else if (state.phase === 'fire') {
+        fireT = clamp(state.phaseTime / fireDuration, 0, 1);
+      } else if (state.phase === 'full') {
+        const t = clamp(state.phaseTime / totalDuration, 0, 1);
+        chargeT = clamp(t / (chargeDuration / totalDuration), 0, 1);
+        fireT = t > (chargeDuration / totalDuration)
+          ? clamp((t - chargeDuration / totalDuration) / (fireDuration / totalDuration), 0, 1)
+          : 0;
+      }
+
+      const charging = state.phase === 'charge' || (state.phase === 'full' && fireT === 0);
+      const firing = state.phase === 'fire' || fireT > 0;
+      return { chargeT, fireT, charging, firing, chargeDuration, fireDuration, totalDuration };
+    }
+
+    function render(time) {
+      const cfg = getConfig();
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      ctx.clearRect(0, 0, w, h);
+
+      drawBackground(time, cfg);
+
+      const phase = getPhaseState(cfg);
+      const chargeEnergy = easeOutCubic(Math.max(cfg.charge * phase.chargeT, state.phase === 'idle' ? cfg.charge : 0));
+      const fireEnergy = easeOutCubic(phase.fireT);
+      const pulse = 1 + Math.sin(time * 0.01 * cfg.speed) * 0.08 * cfg.pulse;
+      const sourceRadius = (36 + cfg.beamWidth * 0.7) * Math.max(0.45, chargeEnergy || cfg.charge * 0.72) * pulse;
+
+      const sourceX = w * 0.23;
+      const sourceY = h * 0.56;
+      const beamLen = w * cfg.length * (phase.firing ? fireEnergy : 0);
+      const beamX2 = sourceX + beamLen;
+      const beamY2 = sourceY;
+      const beamWidth = cfg.beamWidth * (phase.firing ? (0.5 + fireEnergy * 0.8) : 0);
+
+      updateParticles(sourceX, sourceY, sourceRadius, cfg);
+      drawGroundShadow(sourceX, sourceY, cfg.beamWidth * 0.8, beamLen + sourceRadius * 1.2, cfg);
+      drawAuraShell(sourceX, sourceY, sourceRadius * 1.05, cfg, time, Math.max(0.25, chargeEnergy));
+      drawRings(sourceX, sourceY, sourceRadius * 1.6, cfg, time, Math.max(0.25, chargeEnergy));
+      drawParticles(sourceX, sourceY, cfg);
+      drawSourceFlare(sourceX, sourceY, sourceRadius, cfg, Math.max(0.35, chargeEnergy));
+
+      if (beamLen > 3) {
+        drawBeamGlow(sourceX, sourceY, beamX2, beamY2, beamWidth, cfg, time, Math.max(0.7, fireEnergy));
+        drawNoiseStreaks(sourceX, sourceY, beamX2, beamY2, beamWidth, cfg, time, Math.max(0.7, fireEnergy));
+        drawBeamCore(sourceX, sourceY, beamX2, beamY2, beamWidth * cfg.coreIntensity, cfg, time, Math.max(0.7, fireEnergy));
+        drawLightning(sourceX, sourceY, beamX2, beamY2, cfg, time, Math.max(0.7, fireEnergy));
+        drawImpactTip(beamX2, beamY2, beamWidth, cfg, Math.max(0.75, fireEnergy));
+      }
+
+      drawCasterSilhouette(sourceX - sourceRadius * 1.2, sourceY + 24, sourceRadius, cfg);
+    }
+
+    function drawCasterSilhouette(x, y, radius, cfg) {
+      ctx.save();
+      ctx.globalAlpha = 0.8;
+      ctx.fillStyle = 'rgba(0,0,0,0.65)';
+      ctx.beginPath();
+      ctx.arc(x, y - 72, 18, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillRect(x - 14, y - 54, 28, 70);
+      ctx.fillRect(x - 36, y - 42, 32, 10);
+      ctx.fillRect(x + 4, y - 42, 32, 10);
+      ctx.fillRect(x - 12, y + 16, 10, 48);
+      ctx.fillRect(x + 2, y + 16, 10, 48);
+      ctx.restore();
+
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const rim = ctx.createRadialGradient(x + 34, y - 40, 0, x + 20, y - 30, radius * 1.4);
+      rim.addColorStop(0, hsl(cfg.hue, cfg.sat, 84, 0.38));
+      rim.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = rim;
+      ctx.beginPath();
+      ctx.arc(x + 8, y - 28, radius * 1.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function playPhase(name) {
+      state.phase = name;
+      state.phaseTime = 0;
+      resetParticles();
+    }
+
+    function tick(now) {
+      const delta = now - state.started;
+      state.started = now;
+      state.phaseTime += delta;
+      const cfg = getConfig();
+      const phase = getPhaseState(cfg);
+
+      if (state.phase === 'charge' && state.phaseTime >= phase.chargeDuration) {
+        if (state.loop) playPhase('charge');
+        else state.phase = 'idle';
+      }
+      if (state.phase === 'fire' && state.phaseTime >= phase.fireDuration) {
+        if (state.loop) playPhase('fire');
+        else state.phase = 'idle';
+      }
+      if (state.phase === 'full' && state.phaseTime >= phase.totalDuration) {
+        if (state.loop) playPhase('full');
+        else state.phase = 'idle';
+      }
+
+      render(now);
+      requestAnimationFrame(tick);
+    }
+
+    controls.preset.addEventListener('change', () => {
+      const preset = controls.preset.value;
+      if (presets[preset]) applyPreset(preset);
+      updateLabels();
+    });
+
+    Object.values(controls).forEach(el => {
+      if (el === controls.preset) return;
+      el.addEventListener('input', autoCustomPreset);
+      el.addEventListener('input', updateLabels);
+    });
+
+    document.getElementById('playCharge').addEventListener('click', () => playPhase('charge'));
+    document.getElementById('playFire').addEventListener('click', () => playPhase('fire'));
+    document.getElementById('playFull').addEventListener('click', () => playPhase('full'));
+    document.getElementById('toggleLoop').addEventListener('click', (e) => {
+      state.loop = !state.loop;
+      e.currentTarget.textContent = `Loop: ${state.loop ? 'On' : 'Off'}`;
+    });
+
+    window.addEventListener('resize', resize);
+
+    applyPreset('kamehameha');
+    resize();
+    state.started = performance.now();
+    requestAnimationFrame(tick);
+  </script>
+</body>
+</html>
